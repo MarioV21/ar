@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D AR Product Carousel</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <style>
+    /* style.css content - START */
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      /* for touch screen */
+      touch-action: none;
+    }
+
+    body {
+      overflow: hidden;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      background: #111;
+      -webkit-perspective: 1000px;
+              perspective: 1000px;
+      -webkit-transform-style: preserve-3d;
+              transform-style: preserve-3d;
+    }
+
+    #drag-container, #spin-container {
+      position: relative;
+      display: -webkit-box;
+      display: -ms-flexbox;
+      display: flex;
+      margin: auto;
+      -webkit-transform-style: preserve-3d;
+              transform-style: preserve-3d;
+      -webkit-transform: rotateX(-10deg);
+              transform: rotateX(-10deg);
+    }
+
+    /* Apply carousel image/video styles to model-viewer */
+    #spin-container model-viewer {
+      -webkit-transform-style: preserve-3d;
+              transform-style: preserve-3d;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%; /* Controlled by main.js imgWidth */
+      height: 100%; /* Controlled by main.js imgHeight */
+      line-height: normal; /* Overriding original line-height that was for text/images */
+      font-size: 50px; /* Not directly applicable to model-viewer content, but kept for consistency */
+      text-align: center; /* Not directly applicable to model-viewer content, but kept for consistency */
+      /* Adjusted box-shadow and box-reflect for white background */
+      -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+              box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+      -webkit-box-reflect: below 10px linear-gradient(transparent, transparent, rgba(255, 255, 255, 0.3));
+      /* Set background to white */
+      background-color: #ffffff;
+
+      /* Specific model-viewer properties */
+      --poster-color: transparent; /* Makes the poster background transparent */
+      --progress-bar-color: #000000; /* Adjusted for white background */
+      --progress-bar-height: 2px;
+      --error-text-color: #ff0000;
+    }
+
+    #spin-container model-viewer:hover {
+      -webkit-box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+              box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+      -webkit-box-reflect: below 10px linear-gradient(transparent, transparent, rgba(255, 255, 255, 0.5));
+    }
+
+    #drag-container p {
+      font-family: Serif;
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      -webkit-transform: translate(-50%,-50%) rotateX(90deg);
+              transform: translate(-50%,-50%) rotateX(90deg);
+      color: #fff;
+    }
+
+    #ground {
+      width: 900px;
+      height: 900px;
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      -webkit-transform: translate(-50%,-50%) rotateX(90deg);
+              transform: translate(-50%,-50%) rotateX(90deg);
+      background: -webkit-radial-gradient(center center, farthest-side , #9993, transparent);
+    }
+
+    /* #music-container is removed as it's not needed */
+
+    @-webkit-keyframes spin {
+      from{
+        -webkit-transform: rotateY(0deg);
+                transform: rotateY(0deg);
+      } to{
+        -webkit-transform: rotateY(360deg);
+                transform: rotateY(360deg);
+      }
+    }
+
+    @keyframes spin {
+      from{
+        -webkit-transform: rotateY(0deg);
+                transform: rotateY(0deg);
+      } to{
+        -webkit-transform: rotateY(360deg);
+                transform: rotateY(360deg);
+      }
+    }
+    @-webkit-keyframes spinRevert {
+      from{
+        -webkit-transform: rotateY(360deg);
+                transform: rotateY(360deg);
+      } to{
+        -webkit-transform: rotateY(0deg);
+                transform: rotateY(0deg);
+      }
+    }
+    @keyframes spinRevert {
+      from{
+        -webkit-transform: rotateY(360deg);
+                transform: rotateY(360deg);
+      } to{
+        -webkit-transform: rotateY(0deg);
+                transform: rotateY(0deg);
+      }
+    }
+
+    /* AR Viewer specific styles (adjusted for integration) */
+    h1 {
+      font-size: 3em;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #fff; /* Ensure visibility on dark background */
+      position: absolute; /* Position it above the carousel */
+      top: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+
+    .custom-ar-button {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 80px;
+      height: 80px;
+      border: none;
+      border-radius: 50%;
+      background-color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      background-image: url('https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fcdn2.iconfinder.com%2Fdata%2Ficons%2Fmathematics-science-ui-ux%2F512%2Ficonset053_line_512-04-512.png&f=1&nofb=1&ipt=3c98ea47503b6f95bae243bb3bfafd2111317ac0ab4e890ebbb20cc607b321ca');
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 60% 60%;
+      cursor: pointer;
+      z-index: 10;
+    }
+    /* style.css content - END */
+  </style>
+</head>
+<body>
+  <h1>Tap to View in AR</h1>
+
+  <div id="drag-container">
+    <div id="spin-container">
+      <model-viewer
+        src="Sushi.glb"
+        ios-src="Sushi.usdz"
+        alt="3D Sushi Model 1"
+        ar
+        ar-modes="scene-viewer quick-look webxr"
+        auto-rotate
+        camera-controls
+        shadow-intensity="1"
+        exposure="1">
+        <button slot="ar-button" class="custom-ar-button"></button>
+      </model-viewer>
+
+      <model-viewer
+        src="Sushi.glb"
+        ios-src="Sushi.usdz"
+        alt="3D Model 2"
+        ar
+        ar-modes="scene-viewer quick-look webxr"
+        auto-rotate
+        camera-controls
+        shadow-intensity="1"
+        exposure="1">
+        <button slot="ar-button" class="custom-ar-button"></button>
+      </model-viewer>
+
+      <model-viewer
+        src="Sushi.glb"
+        ios-src="Sushi.usdz"
+        alt="3D Model 3"
+        ar
+        ar-modes="scene-viewer quick-look webxr"
+        auto-rotate
+        camera-controls
+        shadow-intensity="1"
+        exposure="1">
+        <button slot="ar-button" class="custom-ar-button"></button>
+      </model-viewer>
+
+      <model-viewer
+        src="Sushi.glb"
+        ios-src="Sushi.usdz"
+        alt="3D Model 4"
+        ar
+        ar-modes="scene-viewer quick-look webxr"
+        auto-rotate
+        camera-controls
+        shadow-intensity="1"
+        exposure="1">
+        <button slot="ar-button" class="custom-ar-button"></button>
+      </model-viewer>
+
+      <p>3D AR Product Carousel</p>
+    </div>
+    <div id="ground"></div>
+  </div>
+
+  <script>
+    // main.js content - START
+    // Author: Hoang Tran (https://fb.com/99.hoangtran)
+
+    // Github verson (1 file .html): https://github.com/HoangTran0410/3DCarousel/blob/master/index.html
+
+    // Give me a coffee <3 https://github.com/HoangTran0410/HoangTran0410/blob/main/DONATE.md
+
+
+    // You can change global variables here:
+    var radius = 240; // how big of the radius
+    var autoRotate = true; // auto rotate or not
+    var rotateSpeed = -60; // unit: seconds/360 degrees
+    var imgWidth = 120; // width of images (unit: px)
+    var imgHeight = 170; // height of images (unit: px)
+
+    // Link of background music - set 'null' if you dont want to play background music
+    var bgMusicURL = null; // Set to null to remove background music
+    var bgMusicControls = false; // Set to false, not relevant if bgMusicURL is null
+
+    /*
+         NOTE:
+           + imgWidth, imgHeight will work for video
+           + if imgWidth, imgHeight too small, play/pause button in <video> will be hidden
+           + Music link are taken from: https://hoangtran0410.github.io/Visualyze-design-your-own-/?theme=HauMaster&playlist=1&song=1&background=28
+           + Custom from code in tiktok video  https://www.facebook.com/J2TEAM.ManhTuan/videos/1353367338135935/
+    */
+
+
+    // ===================== start =======================
+    // animation start after 1000 miliseconds
+    setTimeout(init, 1000);
+
+    var odrag = document.getElementById('drag-container');
+    var ospin = document.getElementById('spin-container');
+    // MODIFIED: Target model-viewer elements instead of img and video
+    var aEle = ospin.getElementsByTagName('model-viewer'); //
+
+    // Size of images
+    ospin.style.width = imgWidth + "px";
+    ospin.style.height = imgHeight + "px";
+
+    // Size of ground - depend on radius
+    var ground = document.getElementById('ground');
+    ground.style.width = radius * 3 + "px";
+    ground.style.height = radius * 3 + "px";
+
+    function init(delayTime) {
+      for (var i = 0; i < aEle.length; i++) {
+        aEle[i].style.transform = "rotateY(" + (i * (360 / aEle.length)) + "deg) translateZ(" + radius + "px)";
+        aEle[i].style.transition = "transform 1s";
+        aEle[i].style.transitionDelay = delayTime || (aEle.length - i) / 4 + "s";
+      }
+    }
+
+    function applyTranform(obj) {
+      // Constrain the angle of camera (between 0 and 180)
+      if(tY > 180) tY = 180;
+      if(tY < 0) tY = 0;
+
+      // Apply the angle
+      obj.style.transform = "rotateX(" + (-tY) + "deg) rotateY(" + (tX) + "deg)";
+    }
+
+    function playSpin(yes) {
+      ospin.style.animationPlayState = (yes?'running':'paused');
+    }
+
+    var sX, sY, nX, nY, desX = 0,
+        desY = 0,
+        tX = 0,
+        tY = 10;
+
+    // auto spin
+    if (autoRotate) {
+      var animationName = (rotateSpeed > 0 ? 'spin' : 'spinRevert');
+      ospin.style.animation = `${animationName} ${Math.abs(rotateSpeed)}s infinite linear`;
+    }
+
+    // add background music - REMOVED
+    if (bgMusicURL) { // This block will now not execute if bgMusicURL is null
+      document.getElementById('music-container').innerHTML += `
+    <audio src="${bgMusicURL}" ${bgMusicControls? 'controls': ''} autoplay loop>    
+    <p>If you are reading this, it is because your browser does not support the audio element.</p>
+    </audio>
+    `;
+    }
+
+    // setup events
+    document.onpointerdown = function (e) {
+      clearInterval(odrag.timer);
+      e = e || window.event;
+      var sX = e.clientX,
+          sY = e.clientY;
+
+      this.onpointermove = function (e) {
+        e = e || window.event;
+        var nX = e.clientX,
+            nY = e.clientY;
+        desX = nX - sX;
+        desY = nY - sY;
+        tX += desX * 0.1;
+        tY += desY * 0.1;
+        applyTranform(odrag);
+        sX = nX;
+        sY = nY;
+      };
+
+      this.onpointerup = function (e) {
+        odrag.timer = setInterval(function () {
+          desX *= 0.95;
+          desY *= 0.95;
+          tX += desX * 0.1;
+          tY += desY * 0.1;
+          applyTranform(odrag);
+          playSpin(false);
+          if (Math.abs(desX) < 0.5 && Math.abs(desY) < 0.5) {
+            clearInterval(odrag.timer);
+            playSpin(true);
+          }
+        }, 17);
+        this.onpointermove = this.onpointerup = null;
+      };
+
+      return false;
+    };
+
+    document.onmousewheel = function(e) {
+      e = e || window.event;
+      var d = e.wheelDelta / 20 || -e.detail;
+      radius += d;
+      init(1);
+    };
+    // main.js content - END
+  </script>
+</body>
+</html>
